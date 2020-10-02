@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_wafv2_web_acl" "cloudfront_waf" {
-  provider = "aws.us-east-1"
+  provider = aws.us-east-1
   count = var.enabled == true ? 1 : 0
 
   name = var.name
@@ -97,6 +97,8 @@ resource "aws_iam_role" "firehose_iam_role" {
 }
 
 data "aws_iam_policy_document" "waf_firehose_logging_policy_document" {
+  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
+  
   statement {
     actions = [
       "s3:AbortMultipartUpload",
