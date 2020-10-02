@@ -125,7 +125,7 @@ resource "aws_iam_role_policy" "firehose_iam_policy" {
 
   name = "${var.name}-firehose-iam-policy"
   role = aws_iam_role.firehose_iam_role[0].id
-  policy = data.aws_iam_policy_document.waf_firehose_logging_policy_document.json
+  policy = data.aws_iam_policy_document.waf_firehose_logging_policy_document[0].json
 }
 
 resource "aws_s3_bucket" "bucket" {
