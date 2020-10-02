@@ -1,9 +1,4 @@
-provider "aws" {
-  alias = "us-east-1"
-}
-
 resource "aws_wafv2_web_acl" "cloudfront_waf" {
-  provider = "aws.us-east-1"
   count = var.enabled == true ? 1 : 0
 
   name = var.name
@@ -97,6 +92,8 @@ resource "aws_iam_role" "firehose_iam_role" {
 }
 
 data "aws_iam_policy_document" "waf_firehose_logging_policy_document" {
+  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
+
   statement {
     actions = [
       "s3:AbortMultipartUpload",
@@ -140,7 +137,6 @@ resource "aws_s3_bucket" "bucket" {
 
 resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
   count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-  provider = "aws.us-east-1"
 
   name = "waf-logs-${var.name}"
   destination = "s3"
@@ -153,7 +149,6 @@ resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_v2_logging" {
   count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-  provider = "aws.us-east-1"
 
   log_destination_configs = [
     aws_kinesis_firehose_delivery_stream.firehose_waf_v2_stream[0].arn]
