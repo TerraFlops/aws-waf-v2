@@ -7,8 +7,8 @@ Insert module description
 #### Example usage
 
 ```hcl-terraform
-module "example" {
-  source = "git::https://github.com/TerraFlops/module-name?ref=v1.0"
+module "wafv2" {
+  source = "git::https://github.com/TerraFlops/aws-waf-v2?ref=v1.0"
   ...
 }
 ```
