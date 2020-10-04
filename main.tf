@@ -138,7 +138,7 @@ resource "aws_s3_bucket" "bucket" {
 resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
   count = var.enabled == true && var.create_logging_configuration ? 1 : 0
 
-  name = "waf-logs-${var.name}"
+  name = "aws-waf-logs-${var.name}"
   destination = "s3"
 
   s3_configuration {
