@@ -69,7 +69,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     for_each = var.ip_sets_rule
     content {
       name = rule.value["name"]
-      priority = rule.value["priority"]
+      priority = rule.key
 
       action {
         dynamic "allow" {
@@ -105,8 +105,8 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
   dynamic rule {
     for_each = var.ip_rate_based_rule != null ? [var.ip_rate_based_rule] : []
     content {
+      priority = rule.key
       name = rule.value["name"]
-      priority = rule.value["priority"]
 
       action {
         dynamic "allow" {
