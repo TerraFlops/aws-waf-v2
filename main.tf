@@ -25,11 +25,6 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       name = rule.value["managed_rule_name"]
 
       override_action {
-        dynamic "allow" {
-          for_each = rule.value["override_action"] == "allow" ? [1] : []
-          content {}
-        }
-
         dynamic "none" {
           for_each = rule.value["override_action"] == "none" ? [1] : []
           content {}
