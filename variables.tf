@@ -32,6 +32,8 @@ variable "ip_sets_rule" {
     name = string
     ip_set_arn = string
     action = string
+    cloudwatch_metrics_enabled = bool
+    sampled_requests_enabled = bool
   }))
   description = "A rule to detect web requests coming from particular IP addresses or address ranges."
   default = {}

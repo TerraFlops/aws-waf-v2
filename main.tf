@@ -90,7 +90,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       }
 
       visibility_config {
-        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
+        metric_name = "${rule.value["name"]}-rule-metric"
         cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
         sampled_requests_enabled = rule.value["sampled_requests_enabled"]
       }
