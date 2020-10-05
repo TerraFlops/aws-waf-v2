@@ -6,12 +6,14 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
   default_action {
     dynamic "allow" {
-      for_each = var.allow_default_action ? [1] : []
+      for_each = var.allow_default_action ? [
+        1] : []
       content {}
     }
 
     dynamic "block" {
-      for_each = var.allow_default_action ? [] : [1]
+      for_each = var.allow_default_action ? [] : [
+        1]
       content {}
     }
   }
@@ -23,6 +25,11 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       name = rule.value["managed_rule_name"]
 
       override_action {
+        dynamic "allow" {
+          for_each = rule.value["override_action"] == "allow" ? [1] : []
+          content {}
+        }
+
         dynamic "none" {
           for_each = rule.value["override_action"] == "none" ? [1] : []
           content {}
@@ -57,6 +64,82 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       }
     }
   }
+
+  dynamic "rule" {
+    for_each = var.ip_sets_rule
+    content {
+      name = rule.value["name"]
+      priority = rule.value["priority"]
+
+      action {
+        dynamic "allow" {
+          for_each = rule.value["action"] == "allow" ? [1] : []
+          content {}
+        }
+
+        dynamic "count" {
+          for_each = rule.value["action"] == "count" ? [1] : []
+          content {}
+        }
+
+        dynamic "block" {
+          for_each = rule.value["action"] == "block" ? [1] : []
+          content {}
+        }
+      }
+
+      statement {
+        ip_set_reference_statement {
+          arn = rule.value["ip_set_arn"]
+        }
+      }
+
+      visibility_config {
+        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
+        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
+        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+      }
+    }
+  }
+
+  dynamic rule {
+    for_each = var.ip_rate_based_rule != null ? [var.ip_rate_based_rule] : []
+    content {
+      name = rule.value["name"]
+      priority = rule.value["priority"]
+
+      action {
+        dynamic "allow" {
+          for_each = rule.value["action"] == "allow" ? [1] : []
+          content {}
+        }
+
+        dynamic "count" {
+          for_each = rule.value["action"] == "count" ? [1] : []
+          content {}
+        }
+
+        dynamic "block" {
+          for_each = rule.value["action"] == "block" ? [1] : []
+          content {}
+        }
+      }
+
+      statement {
+        rate_based_statement {
+          limit = rule.value["limit"]
+          aggregate_key_type = "IP"
+        }
+      }
+
+      visibility_config {
+        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
+        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
+        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+      }
+    }
+  }
+
 
   visibility_config {
     metric_name = "${var.name}-main-metric"
