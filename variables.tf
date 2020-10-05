@@ -12,7 +12,7 @@ variable "name" {
 variable "tags" {
   type = map(string)
   description = "A map of tags (key-value pairs) passed to resources."
-  default = {}
+  default = null
 }
 
 variable "rules" {
@@ -34,7 +34,7 @@ variable "ip_sets_rule" {
     action = string
   }))
   description = "A rule to detect web requests coming from particular IP addresses or address ranges."
-  default = []
+  default = {}
 }
 
 variable "ip_rate_based_rule" {
