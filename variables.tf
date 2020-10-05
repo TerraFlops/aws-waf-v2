@@ -28,11 +28,11 @@ variable "rules" {
 }
 
 variable "ip_sets_rule" {
-  type = list(map(object({
+  type = map(object({
     name = string
     ip_set_arn = string
     action = string
-  })))
+  }))
   description = "A rule to detect web requests coming from particular IP addresses or address ranges."
   default = []
 }
@@ -40,7 +40,6 @@ variable "ip_sets_rule" {
 variable "ip_rate_based_rule" {
   type = object({
     name = string
-    priority = number
     limit = number
     action = string
   })
