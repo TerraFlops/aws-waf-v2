@@ -20,7 +20,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
   # Managed Rules
   dynamic "rule" {
-    for_each = var.rules != null ? var.rules : []
+    for_each = var.rules != null ? var.rules : {}
     content {
       priority = rule.key
       name = rule.value["managed_rule_name"]
@@ -70,7 +70,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
   # IP Set Rules
   dynamic "rule" {
-    for_each = var.ip_sets_rule != null ? var.ip_sets_rule : []
+    for_each = var.ip_sets_rule != null ? var.ip_sets_rule : {}
     content {
       name = rule.value["name"]
       priority = rule.key
@@ -153,7 +153,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
   }
 
   dynamic rule {
-    for_each = var.rule_group_reference_statement != null ? var.rule_group_reference_statement : []
+    for_each = var.rule_group_reference_statement != null ? var.rule_group_reference_statement : {}
     content {
       priority = rule.key
       name = rule.value["name"]
