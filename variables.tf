@@ -17,7 +17,7 @@ variable "tags" {
 
 variable "rules" {
   type = map(object({
-    override_action = string
+    action = string
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool
     vendor_name = string
@@ -31,6 +31,18 @@ variable "ip_sets_rule" {
   type = map(object({
     name = string
     ip_set_arn = string
+    action = string
+    cloudwatch_metrics_enabled = bool
+    sampled_requests_enabled = bool
+  }))
+  description = "A rule to detect web requests coming from particular IP addresses or address ranges."
+  default = {}
+}
+
+variable "rule_group_reference_statement" {
+  type = map(object({
+    name = string
+    rule_group_arn = string
     action = string
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool

@@ -18,6 +18,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
+  # Custom Defined Rules
   dynamic "rule" {
     for_each = var.rules
     content {
@@ -62,6 +63,57 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
+  # Managed Rules
+  dynamic "rule" {
+    for_each = var.rules
+    content {
+      priority = rule.key
+      name = rule.value["managed_rule_name"]
+
+      action {
+        dynamic "allow" {
+          for_each = rule.value["action"] == "allow" ? [
+            1] : []
+          content {}
+        }
+
+        dynamic "count" {
+          for_each = rule.value["action"] == "count" ? [
+            1] : []
+          content {}
+        }
+
+        dynamic "block" {
+          for_each = rule.value["action"] == "block" ? [
+            1] : []
+          content {}
+        }
+      }
+
+      statement {
+        managed_rule_group_statement {
+          name = rule.value["managed_rule_name"]
+          vendor_name = rule.value["vendor_name"]
+
+          dynamic "excluded_rule" {
+            for_each = rule.value["excluded_rules"]
+
+            content {
+              name = excluded_rule.value
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
+        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
+        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+      }
+    }
+  }
+
+  # IP Set Rules
   dynamic "rule" {
     for_each = var.ip_sets_rule
     content {
@@ -102,6 +154,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
+  # Rate Based Rules
   dynamic rule {
     for_each = var.ip_rate_based_rule != null ? [
       var.ip_rate_based_rule] : []
@@ -137,7 +190,47 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       }
 
       visibility_config {
-        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
+        metric_name = "${rule.value["name"]}-rule-metric"
+        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
+        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+      }
+    }
+  }
+
+  dynamic rule {
+    for_each = var.rule_group_reference_statement != null ? [var.rule_group_reference_statement] : []
+    content {
+      priority = rule.key
+      name = rule.value["name"]
+
+      action {
+        dynamic "allow" {
+          for_each = rule.value["action"] == "allow" ? [
+            1] : []
+          content {}
+        }
+
+        dynamic "count" {
+          for_each = rule.value["action"] == "count" ? [
+            1] : []
+          content {}
+        }
+
+        dynamic "block" {
+          for_each = rule.value["action"] == "block" ? [
+            1] : []
+          content {}
+        }
+      }
+
+      statement {
+        rule_group_reference_statement {
+          arn = rule.value["rule_group_arn"]
+        }
+      }
+
+      visibility_config {
+        metric_name = "${rule.value["name"]}-rule-metric"
         cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
         sampled_requests_enabled = rule.value["sampled_requests_enabled"]
       }
