@@ -18,60 +18,9 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
-  # Custom Defined Rules
-  dynamic "rule" {
-    for_each = var.rules
-    content {
-      priority = rule.key
-      name = rule.value["managed_rule_name"]
-
-      action {
-        dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [
-            1] : []
-          content {}
-        }
-      }
-
-
-      statement {
-        managed_rule_group_statement {
-          name = rule.value["managed_rule_name"]
-          vendor_name = rule.value["vendor_name"]
-
-          dynamic "excluded_rule" {
-            for_each = rule.value["excluded_rules"]
-
-            content {
-              name = excluded_rule.value
-            }
-          }
-        }
-      }
-
-      visibility_config {
-        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
-        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
-        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
-      }
-    }
-  }
-
   # Managed Rules
   dynamic "rule" {
-    for_each = var.rules
+    for_each = var.rules != null ? var.rules : []
     content {
       priority = rule.key
       name = rule.value["managed_rule_name"]
@@ -121,7 +70,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
   # IP Set Rules
   dynamic "rule" {
-    for_each = var.ip_sets_rule
+    for_each = var.ip_sets_rule != null ? var.ip_sets_rule : []
     content {
       name = rule.value["name"]
       priority = rule.key
@@ -204,7 +153,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
   }
 
   dynamic rule {
-    for_each = var.rule_group_reference_statement != null ? [var.rule_group_reference_statement] : []
+    for_each = var.rule_group_reference_statement != null ? var.rule_group_reference_statement : []
     content {
       priority = rule.key
       name = rule.value["name"]

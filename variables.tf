@@ -17,11 +17,11 @@ variable "tags" {
 
 variable "rules" {
   type = map(object({
+    managed_rule_name = string
     action = string
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool
     vendor_name = string
-    managed_rule_name = string
     excluded_rules = list(string)
   }))
   description = "List of WAF rules."
