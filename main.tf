@@ -220,7 +220,6 @@ resource "aws_s3_bucket" "bucket" {
 
   bucket = var.waf_v2_logs_bucket
   acl = "private"
-  region = "us-east-1"
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
