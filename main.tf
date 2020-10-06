@@ -26,12 +26,14 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
       override_action {
         dynamic "none" {
-          for_each = rule.value["override_action"] == "none" ? [1] : []
+          for_each = rule.value["override_action"] == "none" ? [
+            1] : []
           content {}
         }
 
         dynamic "count" {
-          for_each = rule.value["override_action"] == "count" ? [1] : []
+          for_each = rule.value["override_action"] == "count" ? [
+            1] : []
           content {}
         }
       }
@@ -68,17 +70,20 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
       action {
         dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [1] : []
+          for_each = rule.value["action"] == "allow" ? [
+            1] : []
           content {}
         }
 
         dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [1] : []
+          for_each = rule.value["action"] == "count" ? [
+            1] : []
           content {}
         }
 
         dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [1] : []
+          for_each = rule.value["action"] == "block" ? [
+            1] : []
           content {}
         }
       }
@@ -98,24 +103,28 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
   }
 
   dynamic rule {
-    for_each = var.ip_rate_based_rule != null ? [var.ip_rate_based_rule] : []
+    for_each = var.ip_rate_based_rule != null ? [
+      var.ip_rate_based_rule] : []
     content {
       priority = rule.key
       name = rule.value["name"]
 
       action {
         dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [1] : []
+          for_each = rule.value["action"] == "allow" ? [
+            1] : []
           content {}
         }
 
         dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [1] : []
+          for_each = rule.value["action"] == "count" ? [
+            1] : []
           content {}
         }
 
         dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [1] : []
+          for_each = rule.value["action"] == "block" ? [
+            1] : []
           content {}
         }
       }
@@ -211,6 +220,7 @@ resource "aws_s3_bucket" "bucket" {
 
   bucket = var.waf_v2_logs_bucket
   acl = "private"
+  region = "us-east-1"
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
