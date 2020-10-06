@@ -42,7 +42,7 @@ variable "ip_sets_rule" {
 variable "rule_group_reference_statement" {
   type = map(object({
     name = string
-    ip_set_arn = string
+    rule_group_arn = string
     action = string
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool
