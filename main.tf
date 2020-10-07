@@ -152,21 +152,15 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
       priority = rule.key
       name = rule.value["name"]
 
-      action {
-        dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [
+      override_action {
+        dynamic "none" {
+          for_each = rule.value["override_action"] == "none" ? [
             1] : []
           content {}
         }
 
         dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [
+          for_each = rule.value["override_action"] == "count" ? [
             1] : []
           content {}
         }
