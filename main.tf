@@ -20,7 +20,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 
   # Managed Rules
   dynamic "rule" {
-    for_each = var.rules != null ? var.rules : {}
+    for_each = var.managed_rules != null ? var.managed_rules : {}
     content {
       priority = rule.key
       name = rule.value["managed_rule_name"]
