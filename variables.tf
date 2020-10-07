@@ -15,10 +15,10 @@ variable "tags" {
   default = null
 }
 
-variable "rules" {
+variable "managed_rules" {
   type = map(object({
     managed_rule_name = string
-    action = string
+    override_action = string
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool
     vendor_name = string
