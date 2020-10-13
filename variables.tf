@@ -24,7 +24,8 @@ variable "managed_rules" {
     vendor_name = string
     excluded_rules = list(string)
   }))
-  description = "List of WAF rules."
+  description = "Object of AWS Managed WAFv2 rules."
+  default = null
 }
 
 variable "ip_sets_rule" {
@@ -36,7 +37,7 @@ variable "ip_sets_rule" {
     sampled_requests_enabled = bool
   }))
   description = "A rule to detect web requests coming from particular IP addresses or address ranges."
-  default = {}
+  default = null
 }
 
 variable "rule_group_reference_statement" {
@@ -47,8 +48,8 @@ variable "rule_group_reference_statement" {
     cloudwatch_metrics_enabled = bool
     sampled_requests_enabled = bool
   }))
-  description = "A rule to detect web requests coming from particular IP addresses or address ranges."
-  default = {}
+  description = "A rule statement used to run the rules that are defined in an WAFv2 Rule Group"
+  default = null
 }
 
 variable "ip_rate_based_rule" {
