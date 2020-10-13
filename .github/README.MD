@@ -1,14 +1,14 @@
 # Terraflops Terraform Module
  
-### Module name
+### AWS WAFv2 Web ACL
 
-Insert module description
+Allows the creation of an AWS WAF V2 Web ACL Resource.
 
 #### Example usage
 
 ```hcl-terraform
 module "example_waf" {
-  source = "git::https://github.com/TerraFlops/aws-waf-v2?ref=v1.19"
+  source = "git::https://github.com/TerraFlops/aws-waf-v2-web-acl?ref=v1.19"
   providers = {
     aws = aws.us_east_1
   }
