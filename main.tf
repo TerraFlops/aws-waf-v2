@@ -1,288 +1,184 @@
-resource "aws_wafv2_web_acl" "cloudfront_waf" {
-  count = var.enabled == true ? 1 : 0
 
-  name = var.name
+# Create IP set for the whitelist
+resource "aws_wafv2_ip_set" "ip_whitelist" {
+  name = "${var.name}IpWhitelist"
+  description = "${var.name} IP Address whitelist"
+  scope = "CLOUDFRONT"
+  ip_address_version = "IPV4"
+  addresses = var.ip_whitelist
+}
+
+# Create IP set for the blacklist
+resource "aws_wafv2_ip_set" "ip_blacklist" {
+  depends_on = [
+    aws_wafv2_ip_set.ip_whitelist
+  ]
+  name = "${var.name}IpBlacklist"
+  description = "${var.name} IP Address blacklist"
+  scope = "CLOUDFRONT"
+  ip_address_version = "IPV4"
+  addresses = var.ip_blacklist
+}
+
+# Create WAF ACL for Debi CloudFront distributions
+resource "aws_wafv2_web_acl" "web_acl" {
+  depends_on = [
+    aws_wafv2_ip_set.ip_blacklist,
+    aws_wafv2_ip_set.ip_whitelist
+  ]
+  name = "${var.name}WebAcl"
+  description = "${var.name} Web ACL"
   scope = "CLOUDFRONT"
 
   default_action {
-    dynamic "allow" {
-      for_each = var.allow_default_action ? [
-        1] : []
-      content {}
-    }
+    allow {}
+  }
 
-    dynamic "block" {
-      for_each = var.allow_default_action ? [] : [
-        1]
-      content {}
+  # Configure CloudWatch
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name = "${var.name}WebAcl"
+    sampled_requests_enabled = false
+  }
+
+  # Rule 1: IP Address Blacklist
+  dynamic "rule" {
+    # This is a kludge to enable/disable the rule block- either passing a dummy set with a single value, or an empty set to bypass the rule
+    for_each = length(var.ip_blacklist) > 0 ? toset([ "dummy-value" ]) : toset([])
+    content {
+      name = "${var.name}IpBlacklist"
+      priority = 1
+      visibility_config {
+        cloudwatch_metrics_enabled = false
+        metric_name = "${var.name}IpBlacklist"
+        sampled_requests_enabled = false
+      }
+      action {
+        block {}
+      }
+      statement {
+        ip_set_reference_statement {
+          arn = aws_wafv2_ip_set.ip_blacklist.arn
+        }
+      }
     }
   }
 
-  # Managed Rules
+  # Rule 2: URL Blacklist
   dynamic "rule" {
-    for_each = var.managed_rules != null ? var.managed_rules : {}
+    # This is a kludge to enable/disable the rule block- either passing a dummy set with a single value, or an empty set to bypass the rule
+    for_each = length(var.url_blacklist) > 0 ? toset(["dummy-value"]) : toset([])
     content {
-      priority = rule.key
-      name = rule.value["managed_rule_name"]
-
-      override_action {
-        dynamic "none" {
-          for_each = rule.value["override_action"] == "none" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "count" {
-          for_each = rule.value["override_action"] == "count" ? [
-            1] : []
-          content {}
-        }
+      name = "${var.name}UrlBlacklist"
+      priority = 1 + (length(var.ip_blacklist) > 0 ? 1 : 0)
+      action {
+        block {}
       }
-
-      statement {
-        managed_rule_group_statement {
-          name = rule.value["managed_rule_name"]
-          vendor_name = rule.value["vendor_name"]
-
-          dynamic "excluded_rule" {
-            for_each = rule.value["excluded_rules"]
-
-            content {
-              name = excluded_rule.value
+      visibility_config {
+        cloudwatch_metrics_enabled = false
+        metric_name = "${var.name}UrlBlacklist"
+        sampled_requests_enabled = false
+      }
+      dynamic "statement" {
+        for_each = var.url_blacklist
+        content {
+          byte_match_statement {
+            positional_constraint = "STARTS_WITH"
+            search_string = statement.value
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type = "LOWERCASE"
             }
           }
         }
       }
-
-      visibility_config {
-        metric_name = "${rule.value["managed_rule_name"]}-rule-metric"
-        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
-        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
-      }
     }
   }
 
-  # IP Set Rules
+  # Rule 3: IP Address Whitelist
   dynamic "rule" {
-    for_each = var.ip_sets_rule != null ? var.ip_sets_rule : {}
+    # This is a kludge to enable/disable the rule block- either passing a dummy set with a single value, or an empty set to bypass the rule
+    for_each = length(var.ip_whitelist) > 0 ? toset([ "dummy-value" ]) : toset([])
     content {
-      name = rule.value["name"]
-      priority = rule.key
-
-      action {
-        dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [
-            1] : []
-          content {}
-        }
+      name = "${var.name}IpWhitelist"
+      priority = 1 + (length(var.ip_blacklist) > 0 ? 1 : 0) + (length(var.url_blacklist) > 0 ? 1 : 0)
+      visibility_config {
+        cloudwatch_metrics_enabled = false
+        metric_name = aws_wafv2_ip_set.ip_whitelist.name
+        sampled_requests_enabled = false
       }
-
+      action {
+        allow {}
+      }
       statement {
         ip_set_reference_statement {
-          arn = rule.value["ip_set_arn"]
+          arn = aws_wafv2_ip_set.ip_whitelist.arn
         }
-      }
-
-      visibility_config {
-        metric_name = "${rule.value["name"]}-rule-metric"
-        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
-        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
       }
     }
   }
 
-  # Rate Based Rules
-  dynamic rule {
-    for_each = var.ip_rate_based_rule != null ? [
-      var.ip_rate_based_rule] : []
+  # Rule 4: URL Whitelist
+  dynamic "rule" {
+    # This is a kludge to enable/disable the rule block- either passing a dummy set with a single value, or an empty set to bypass the rule
+    for_each = length(var.url_whitelist) > 0 ? toset(["dummy-value"]) : toset([])
     content {
-      priority = rule.key
-      name = rule.value["name"]
-
+      name = "${var.name}UrlWhitelist"
+      priority = 1 + (length(var.ip_blacklist) > 0 ? 1 : 0) + (length(var.url_blacklist) > 0 ? 1 : 0) + (length(var.ip_whitelist) > 0 ? 1 : 0)
       action {
-        dynamic "allow" {
-          for_each = rule.value["action"] == "allow" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "count" {
-          for_each = rule.value["action"] == "count" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "block" {
-          for_each = rule.value["action"] == "block" ? [
-            1] : []
-          content {}
-        }
+        block {}
       }
-
-      statement {
-        rate_based_statement {
-          limit = rule.value["limit"]
-          aggregate_key_type = "IP"
-        }
-      }
-
       visibility_config {
-        metric_name = "${rule.value["name"]}-rule-metric"
-        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
-        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+        cloudwatch_metrics_enabled = false
+        metric_name = "${var.name}UrlWhitelist"
+        sampled_requests_enabled = false
+      }
+      dynamic "statement" {
+        for_each = var.url_whitelist
+        content {
+          byte_match_statement {
+            positional_constraint = "STARTS_WITH"
+            search_string = statement.value
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type = "LOWERCASE"
+            }
+          }
+        }
       }
     }
   }
 
-  dynamic rule {
-    for_each = var.rule_group_reference_statement != null ? var.rule_group_reference_statement : {}
+  # Rule 5+: AWS Managed Firewall Rules
+  dynamic "rule" {
+    for_each = [
+      for rule in sort(toset(var.managed_rules)): {
+        name = rule
+        priority = index(var.managed_rules, rule) + 1
+      }
+    ]
     content {
-      priority = rule.key
       name = rule.value["name"]
-
+      priority = rule.value["priority"] + (length(var.ip_blacklist) > 0 ? 1 : 0) + (length(var.url_blacklist) > 0 ? 1 : 0) + (length(var.ip_whitelist) > 0 ? 1 : 0) + (length(var.url_whitelist) > 0 ? 1 : 0)
       override_action {
-        dynamic "none" {
-          for_each = rule.value["override_action"] == "none" ? [
-            1] : []
-          content {}
-        }
-
-        dynamic "count" {
-          for_each = rule.value["override_action"] == "count" ? [
-            1] : []
-          content {}
-        }
+        none {}
       }
-
-      statement {
-        rule_group_reference_statement {
-          arn = rule.value["rule_group_arn"]
-        }
-      }
-
       visibility_config {
-        metric_name = "${rule.value["name"]}-rule-metric"
-        cloudwatch_metrics_enabled = rule.value["cloudwatch_metrics_enabled"]
-        sampled_requests_enabled = rule.value["sampled_requests_enabled"]
+        cloudwatch_metrics_enabled = false
+        metric_name = "${var.name}${rule.value["name"]}"
+        sampled_requests_enabled = false
       }
-    }
-  }
-
-
-  visibility_config {
-    metric_name = "${var.name}-main-metric"
-    cloudwatch_metrics_enabled = var.visibility_config["cloudwatch_metrics_enabled"]
-    sampled_requests_enabled = var.visibility_config["sampled_requests_enabled"]
-  }
-
-  tags = var.tags
-}
-
-data "aws_iam_policy_document" "waf_firehose_logging_role_document" {
-  statement {
-    actions = [
-      "sts:AssumeRole"
-    ]
-    effect = "Allow"
-    principals {
-      identifiers = [
-        "firehose.amazonaws.com"
-      ]
-      type = "Service"
-    }
-  }
-}
-
-resource "aws_iam_role" "firehose_iam_role" {
-  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-
-  name = "${var.name}-firehouse-iam-role"
-
-  assume_role_policy = data.aws_iam_policy_document.waf_firehose_logging_role_document.json
-
-}
-
-data "aws_iam_policy_document" "waf_firehose_logging_policy_document" {
-  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-
-  statement {
-    actions = [
-      "s3:AbortMultipartUpload",
-      "s3:GetBucketLocation",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:ListBucketMultipartUploads",
-      "s3:PutObject"
-    ]
-    effect = "Allow"
-    resources = [
-      "${aws_s3_bucket.bucket[0].arn}/*",
-      aws_s3_bucket.bucket[0].arn
-    ]
-  }
-  statement {
-    actions = [
-      "iam:CreateServiceLinkedRole"
-    ]
-    effect = "Allow"
-    resources = [
-      "arn:aws:iam::*:role/aws-service-role/wafv2.amazonaws.com/AWSServiceRoleForWAFV2Logging"
-    ]
-  }
-}
-
-resource "aws_iam_role_policy" "firehose_iam_policy" {
-  count = var.enabled && var.create_logging_configuration ? 1 : 0
-
-  name = "${var.name}-firehose-iam-policy"
-  role = aws_iam_role.firehose_iam_role[0].id
-  policy = data.aws_iam_policy_document.waf_firehose_logging_policy_document[0].json
-}
-
-resource "aws_s3_bucket" "bucket" {
-  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-
-  bucket = var.waf_v2_logs_bucket
-  acl = "private"
-}
-
-resource "aws_kinesis_firehose_delivery_stream" "firehose_waf_v2_stream" {
-  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-
-  name = "aws-waf-logs-${var.name}"
-  destination = "s3"
-
-  s3_configuration {
-    role_arn = aws_iam_role.firehose_iam_role[0].arn
-    bucket_arn = aws_s3_bucket.bucket[0].arn
-  }
-}
-
-resource "aws_wafv2_web_acl_logging_configuration" "waf_v2_logging" {
-  count = var.enabled == true && var.create_logging_configuration ? 1 : 0
-
-  log_destination_configs = [
-    aws_kinesis_firehose_delivery_stream.firehose_waf_v2_stream[0].arn]
-  resource_arn = aws_wafv2_web_acl.cloudfront_waf[0].arn
-
-
-  dynamic "redacted_fields" {
-    for_each = var.redacted_fields_single_header
-    content {
-      single_header {
-        name = redacted_fields.value
+      statement {
+        managed_rule_group_statement {
+          name = rule.value["name"]
+          vendor_name = "AWS"
+        }
       }
     }
   }
