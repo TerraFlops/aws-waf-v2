@@ -129,7 +129,7 @@ resource "aws_wafv2_web_acl" "web_acl" {
       name = "${var.name}UrlWhitelist"
       priority = 1 + (length(var.ip_blacklist) > 0 ? 1 : 0) + (length(var.url_blacklist) > 0 ? 1 : 0) + (length(var.ip_whitelist) > 0 ? 1 : 0)
       action {
-        block {}
+        allow {}
       }
       visibility_config {
         cloudwatch_metrics_enabled = false
